@@ -33,7 +33,7 @@ export class InstrumentPanel {
         this.readoutHeading = document.getElementById('readout-heading');
         this.readoutAoa = document.getElementById('readout-aoa');
     }
-    update(aircraft) {
+    update(aircraft, floatingOrigin) {
         if (this.horizonGroup) {
             const pitchPx = aircraft.pitchDeg * InstrumentPanel.PITCH_PX_PER_DEG;
             this.horizonGroup.setAttribute('transform', `rotate(${-aircraft.rollDeg} 100 100) translate(0 ${pitchPx})`);
@@ -44,7 +44,10 @@ export class InstrumentPanel {
         if (this.stallIndicator) {
             this.stallIndicator.style.visibility = aircraft.stalled ? 'visible' : 'hidden';
         }
-        const altitudeAgl = aircraft.group.position.y - aircraft.lastGroundHeight;
+        // Берём мировую позицию через FloatingOrigin, а не group.position.y —
+        // иначе при смене чанков высота может сбрасываться в 0.
+        const worldPos = floatingOrigin.getWorldPosition(aircraft.group);
+        const altitudeAgl = worldPos.y - aircraft.lastGroundHeight;
         if (this.readoutSpeed)
             this.readoutSpeed.textContent = (aircraft.speed * 3.6).toFixed(0);
         if (this.readoutAltitude)

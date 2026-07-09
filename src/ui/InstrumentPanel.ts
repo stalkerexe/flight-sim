@@ -1,4 +1,5 @@
 import { Aircraft } from '@/aircraft/Aircraft';
+import { FloatingOrigin } from '@/core/FloatingOrigin';
 
 /**
  * Управляет приборной панелью (index.html → #instrument-panel): авиагоризонт
@@ -38,7 +39,7 @@ export class InstrumentPanel {
     this.readoutAoa = document.getElementById('readout-aoa');
   }
 
-  update(aircraft: Aircraft): void {
+  update(aircraft: Aircraft, floatingOrigin: FloatingOrigin): void {
     if (this.horizonGroup) {
       const pitchPx = aircraft.pitchDeg * InstrumentPanel.PITCH_PX_PER_DEG;
       this.horizonGroup.setAttribute(
@@ -55,7 +56,10 @@ export class InstrumentPanel {
       this.stallIndicator.style.visibility = aircraft.stalled ? 'visible' : 'hidden';
     }
 
-    const altitudeAgl = aircraft.group.position.y - aircraft.lastGroundHeight;
+    // Берём мировую позицию через FloatingOrigin, а не group.position.y —
+    // иначе при смене чанков высота может сбрасываться в 0.
+    const worldPos = floatingOrigin.getWorldPosition(aircraft.group);
+    const altitudeAgl = worldPos.y - aircraft.lastGroundHeight;
 
     if (this.readoutSpeed) this.readoutSpeed.textContent = (aircraft.speed * 3.6).toFixed(0);
     if (this.readoutAltitude) this.readoutAltitude.textContent = Math.max(0, altitudeAgl).toFixed(0);

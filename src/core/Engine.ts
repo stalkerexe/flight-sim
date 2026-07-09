@@ -140,7 +140,7 @@ export class Engine {
     this.sunLight.target.updateMatrixWorld();
 
     this.renderer.render(this.scene, this.camera);
-    this.instrumentPanel.update(this.aircraftController.aircraft);
+    this.instrumentPanel.update(this.aircraftController.aircraft, this.floatingOrigin);
     this.updateStats(dt);
   };
 
