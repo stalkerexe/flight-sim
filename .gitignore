@@ -1,3 +1,10 @@
-```ts
+```
+# Dependencies
+node_modules/
 
+# Build outputs
+dist/
+
+# TypeScript build info
+tsconfig.tsbuildinfo
 ```
