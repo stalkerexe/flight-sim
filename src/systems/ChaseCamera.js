@@ -1,45 +1,58 @@
 import * as THREE from 'three';
 /**
- * Камера от третьего лица, следующая за самолётом с экспоненциальным
- * сглаживанием (а не жёстко прикреплённая) — резкие манёвры самолёта не
- * дёргают камеру один к одному.
+ * Камера от третьего лица, следующая за самолётом.
  *
- * Работает целиком в ЛОКАЛЬНЫХ (относительно текущего floating origin)
- * координатах: желаемая позиция каждый кадр пересчитывается заново из
- * текущей локальной позиции/ориентации самолёта, поэтому отдельная
- * регистрация в FloatingOrigin камере не нужна.
+ * Ключевое изменение: камера игнорирует крен (roll) самолёта при расчёте позиции,
+ * чтобы при поворотах она не уходила вбок или под землю. Она всегда остаётся
+ * сзади и снизу относительно горизонта, обеспечивая стабильный обзор.
  *
- * Камера привязана к нижней части экрана — следует за самолётом с фиксированным
- * смещением назад-вниз, чтобы самолёт всегда был виден в нижней трети кадра.
+ * Самолёт всегда находится в нижней части экрана.
  */
 export class ChaseCamera {
-    /** Смещение камеры от самолёта в его локальных осях: назад и вниз для вида снизу. */
-    localOffset = new THREE.Vector3(0, -1.5, 6);
-    /** Скорость сглаживания (выше — резче следует за целью), 1/с. */
-    smoothRate = 4;
+    /** Дистанция камеры от самолёта */
+    distance = 8;
+    /** Высота камеры над самолётом (отрицательная = ниже самолёта) */
+    heightOffset = -2.5;
+    /** Скорость сглаживания позиции (1/с) */
+    posSmoothRate = 6;
+    /** Скорость сглаживания поворота камеры (1/с) */
+    rotSmoothRate = 4;
     smoothedPosition = new THREE.Vector3();
-    smoothedQuaternion = new THREE.Quaternion();
+    currentLookAt = new THREE.Vector3();
     initialized = false;
     update(dt, aircraftGroup, camera) {
-        // Вычисляем желаемую позицию камеры: смещение в локальных осях самолёта + мировая позиция
-        const desiredPosition = this.localOffset.clone().applyQuaternion(aircraftGroup.quaternion);
-        desiredPosition.add(aircraftGroup.position);
-        // Камера смотрит туда же, куда самолёт, но с небольшим подъёмом вверх для обзора
-        const desiredQuaternion = aircraftGroup.quaternion.clone();
+        // Получаем направление взгляда самолёта (вперёд)
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(aircraftGroup.quaternion);
+        forward.y = 0; // Игнорируем вертикальную составляющую для направления "куда летим" по горизонту
+        forward.normalize();
+        // Если самолёт смотрит вертикально вверх/вниз, forward может стать нулевым
+        if (forward.lengthSq() < 0.001) {
+            forward.set(0, 0, -1).applyQuaternion(aircraftGroup.quaternion);
+            forward.y = 0;
+            if (forward.lengthSq() < 0.001)
+                forward.set(0, 0, 1);
+            forward.normalize();
+        }
+        // Желаемая позиция камеры: сзади по направлению полёта + смещение вниз
+        const desiredPosition = aircraftGroup.position.clone();
+        desiredPosition.addScaledVector(forward, -this.distance); // Сзади
+        desiredPosition.y += this.heightOffset; // Ниже
+        // Точка, куда смотрит камера (немного выше самолёта, чтобы он был внизу экрана)
+        const targetLookAt = aircraftGroup.position.clone();
+        targetLookAt.y += 1.5; // Смотрим чуть выше центра самолёта -> сам самолёт внизу кадра
         if (!this.initialized) {
             this.smoothedPosition.copy(desiredPosition);
-            this.smoothedQuaternion.copy(desiredQuaternion);
+            this.currentLookAt.copy(targetLookAt);
             this.initialized = true;
         }
         else {
-            // Плавное следование с экспоненциальным затуханием
-            const t = 1 - Math.exp(-this.smoothRate * dt);
-            this.smoothedPosition.lerp(desiredPosition, t);
-            this.smoothedQuaternion.slerp(desiredQuaternion, t);
+            // Плавное следование
+            const posT = 1 - Math.exp(-this.posSmoothRate * dt);
+            this.smoothedPosition.lerp(desiredPosition, posT);
+            const rotT = 1 - Math.exp(-this.rotSmoothRate * dt);
+            this.currentLookAt.lerp(targetLookAt, rotT);
         }
         camera.position.copy(this.smoothedPosition);
-        camera.quaternion.copy(this.smoothedQuaternion);
-        // Небольшой наклон камеры вверх, чтобы самолёт был в нижней части экрана
-        camera.rotateX(0.15);
+        camera.lookAt(this.currentLookAt);
     }
 }
