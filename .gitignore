@@ -4,7 +4,6 @@
 __pycache__/
 *.o
 *.obj
-*.tsbuildinfo
 dist/
 build/
 target/
@@ -25,26 +24,38 @@ venv/
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# Coverage
+# Python specific
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+
+# TypeScript/JavaScript build output
+*.js.map
+*.tsbuildinfo
+
+# Coverage reports
 coverage/
 htmlcov/
 .coverage
 
-# MyPy
+# MyPy cache
 .mypy_cache/
-
-# Pytest
+# Pytest cache
 .pytest_cache/
 
 # Gradle
 .gradle/
 
-# DS_Store
-.DS_Store
+# Maven
+target/
 
-# Thumbs
+# Temporary files
+*.tmp
+*~
+.DS_Store
 Thumbs.db
 ```
