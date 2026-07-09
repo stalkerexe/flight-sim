@@ -120,7 +120,7 @@ export const AIRCRAFT = {
   PITCH_RATE: 1.1, // рад/с при полном отклонении стика И полной эффективности рулей (см. FLIGHT.CONTROL_EFFECTIVENESS_REF_SPEED)
   ROLL_RATE: 2.2,
   YAW_RATE: 0.8,
-  THROTTLE_RATE: 0.5, // единиц throttle (0..1) в секунду при удержании клавиши
+  THROTTLE_RATE: 1.2, // единиц throttle (0..1) в секунду при удержании клавиши — увеличено для более быстрого разгона
   START_THROTTLE: 0.5,
   /**
    * Стартовая скорость (м/с), вдоль направления носа. КРИТИЧНО: самолёт
