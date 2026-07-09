@@ -8,18 +8,23 @@ import * as THREE from 'three';
  * координатах: желаемая позиция каждый кадр пересчитывается заново из
  * текущей локальной позиции/ориентации самолёта, поэтому отдельная
  * регистрация в FloatingOrigin камере не нужна.
+ *
+ * Камера привязана к нижней части экрана — следует за самолётом с фиксированным
+ * смещением назад-вниз, чтобы самолёт всегда был виден в нижней трети кадра.
  */
 export class ChaseCamera {
-    /** Смещение камеры от самолёта в его локальных осях: назад и вверх. */
-    localOffset = new THREE.Vector3(0, 2.2, 8.5);
+    /** Смещение камеры от самолёта в его локальных осях: назад и вниз для вида снизу. */
+    localOffset = new THREE.Vector3(0, -1.5, 6);
     /** Скорость сглаживания (выше — резче следует за целью), 1/с. */
-    smoothRate = 6;
+    smoothRate = 4;
     smoothedPosition = new THREE.Vector3();
     smoothedQuaternion = new THREE.Quaternion();
     initialized = false;
     update(dt, aircraftGroup, camera) {
+        // Вычисляем желаемую позицию камеры: смещение в локальных осях самолёта + мировая позиция
         const desiredPosition = this.localOffset.clone().applyQuaternion(aircraftGroup.quaternion);
         desiredPosition.add(aircraftGroup.position);
+        // Камера смотрит туда же, куда самолёт, но с небольшим подъёмом вверх для обзора
         const desiredQuaternion = aircraftGroup.quaternion.clone();
         if (!this.initialized) {
             this.smoothedPosition.copy(desiredPosition);
@@ -27,13 +32,14 @@ export class ChaseCamera {
             this.initialized = true;
         }
         else {
+            // Плавное следование с экспоненциальным затуханием
             const t = 1 - Math.exp(-this.smoothRate * dt);
             this.smoothedPosition.lerp(desiredPosition, t);
             this.smoothedQuaternion.slerp(desiredQuaternion, t);
         }
         camera.position.copy(this.smoothedPosition);
         camera.quaternion.copy(this.smoothedQuaternion);
-        // Небольшой наклон вниз, чтобы самолёт был виден в нижней трети кадра, а не строго по центру.
-        camera.rotateX(-0.12);
+        // Небольшой наклон камеры вверх, чтобы самолёт был в нижней части экрана
+        camera.rotateX(0.15);
     }
 }
