@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Explorer — Post-Apocalyptic Flight Sim</title>
+    <style>
+      html, body { margin: 0; padding: 0; overflow: hidden; background: #05070a; }
+      #app { position: fixed; inset: 0; }
+      canvas { display: block; touch-action: none; }
+      #hud {
+        position: fixed; inset: 0; pointer-events: none;
+        font-family: 'Segoe UI', system-ui, sans-serif; color: #d7e6ea;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      }
+      #stats-panel {
+        position: absolute; top: 12px; left: 12px;
+        font-size: 12px; line-height: 1.5; background: rgba(0,0,0,0.35);
+        padding: 8px 12px; border-radius: 6px; backdrop-filter: blur(4px);
+      }
+      #controls-hint {
+        position: absolute; bottom: 12px; left: 12px;
+        font-size: 12px; line-height: 1.6; background: rgba(0,0,0,0.35);
+        padding: 8px 12px; border-radius: 6px; backdrop-filter: blur(4px);
+      }
+      #controls-hint b { color: #ffd479; }
+      #instrument-panel {
+        position: absolute; bottom: 12px; right: 12px;
+        display: flex; align-items: flex-end; gap: 10px;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+      }
+      #horizon-gauge {
+        width: 130px; height: 130px; border-radius: 50%;
+        background: #111; box-shadow: 0 0 0 2px #444, 0 4px 10px rgba(0,0,0,0.5);
+        overflow: hidden; position: relative;
+      }
+      #horizon-svg { width: 100%; height: 100%; display: block; }
+      #digital-readouts {
+        background: rgba(0,0,0,0.45); border-radius: 8px; padding: 8px 12px;
+        font-size: 12px; line-height: 1.65; color: #e8f0f2; min-width: 148px;
+        backdrop-filter: blur(4px);
+      }
+      #digital-readouts .value { color: #7fe0a8; font-weight: 600; }
+      #digital-readouts .warn { color: #ff6b6b; font-weight: 700; }
+      #throttle-gauge {
+        width: 20px; height: 130px; background: rgba(0,0,0,0.45); border-radius: 6px;
+        position: relative; overflow: hidden; box-shadow: 0 0 0 1px #444;
+      }
+      #throttle-fill {
+        position: absolute; bottom: 0; left: 0; right: 0; background: #ffd479; height: 50%;
+        transition: height 0.08s linear;
+      }
+      #throttle-gauge::after {
+        content: 'GAZ'; position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+        font-size: 9px; color: #aaa; letter-spacing: 1px;
+      }
+      #crash-message {
+        display: none;
+        position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+        font-size: 22px; font-weight: 600; color: #ff5252; text-align: center;
+        background: rgba(0,0,0,0.55); padding: 16px 28px; border-radius: 10px;
+        pointer-events: none;
+      }
+      #crash-message span { display: block; font-size: 14px; font-weight: 400; color: #f0f0f0; margin-top: 6px; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hud">
+      <div id="stats-panel"></div>
+      <div id="controls-hint">
+        <b>W</b>/<b>S</b> тангаж &nbsp; <b>A</b>/<b>D</b> крен &nbsp; <b>Q</b>/<b>E</b> рысканье<br>
+        <b>Shift</b> держать — газ вверх &nbsp; <b>Ctrl</b> держать — газ вниз
+      </div>
+      <div id="crash-message">
+        Столкновение с рельефом
+        <span>Нажмите R для перезапуска</span>
+      </div>
+      <div id="instrument-panel">
+        <div id="digital-readouts">
+          <div>Скорость: <span class="value" id="readout-speed">0</span> км/ч</div>
+          <div>Высота (AGL): <span class="value" id="readout-altitude">0</span> м</div>
+          <div>Верт. скорость: <span class="value" id="readout-vspeed">0</span> м/с</div>
+          <div>Курс: <span class="value" id="readout-heading">0</span>°</div>
+          <div>Угол атаки: <span class="value" id="readout-aoa">0</span>°</div>
+          <div id="readout-stall" class="warn" style="visibility: hidden;">СРЫВ ПОТОКА</div>
+        </div>
+        <div id="throttle-gauge"><div id="throttle-fill"></div></div>
+        <div id="horizon-gauge">
+          <svg id="horizon-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <clipPath id="horizon-clip"><circle cx="100" cy="100" r="92"/></clipPath>
+            </defs>
+            <g clip-path="url(#horizon-clip)">
+              <g id="horizon-group">
+                <rect x="-200" y="-500" width="600" height="500" fill="#3a6ea5"/>
+                <rect x="-200" y="0" width="600" height="500" fill="#6b4a2f"/>
+                <rect x="-200" y="-3" width="600" height="6" fill="#fff"/>
+              </g>
+            </g>
+            <line x1="55" y1="100" x2="85" y2="100" stroke="#ffd479" stroke-width="3"/>
+            <line x1="115" y1="100" x2="145" y2="100" stroke="#ffd479" stroke-width="3"/>
+            <circle cx="100" cy="100" r="3" fill="#ffd479"/>
+            <circle cx="100" cy="100" r="92" fill="none" stroke="#555" stroke-width="3"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
